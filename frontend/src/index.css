@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans min-h-screen selection:bg-gold-500 selection:text-navy-950;
+  }
+}
+
+/* Custom Scrollbar for dashboard tables and sidebars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Gold Gradient Text utility */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #E0BD74 0%, #D4AF37 50%, #A48243 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
