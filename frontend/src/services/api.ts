@@ -122,18 +122,23 @@ export const clientService = {
           _id: c._id,
           id: c._id,
           clientId: c.clientId,
-          fullName: c.clientName,
+          fullName: c.clientName || c.fullName || c.name,
           businessName: c.businessName,
           email: c.email,
-          phone: c.mobile,
+          phone: c.mobile || c.phone,
+          mobile: c.mobile || c.phone,
           city: c.city,
           state: c.state,
           pan: c.pan,
           gstin: c.gstin,
+          clientType: c.clientType || 'Individual',
           totalServices: c.totalServices || 1,
           paymentStatus: c.paymentStatus || 'Pending',
           accountStatus: c.accountStatus || 'Active',
+          createdAt: c.createdAt || c.joinedDate || new Date().toISOString(),
         }));
+        // Sync backend data into localStorage cache so partner portal stays consistent
+        try { localStorage.setItem('bls_partner_mock_clients', JSON.stringify(mapped)); } catch (_) {}
         return { data: { success: true, clients: mapped, data: mapped } };
       }
     } catch (err) {
@@ -255,15 +260,27 @@ export const requestService = {
           _id: r._id,
           id: r._id,
           requestId: r.requestId,
+          serviceRequestId: r.requestId,
+          clientId: r.clientId || r._id,
           clientName: r.clientName,
           serviceName: r.service,
-          category: r.category,
-          status: r.status,
-          priority: r.priority,
+          serviceCategory: r.category || 'Registration Services',
+          category: r.category || 'Registration Services',
+          status: (r.status || 'SUBMITTED').toUpperCase(),
+          priority: (r.priority || 'MEDIUM').toUpperCase(),
+          financialYear: '2026-27',
+          description: (r.notes && r.notes[0]) || `Consultation request for ${r.service}`,
+          requirementDesc: (r.notes && r.notes[0]) || `Consultation request for ${r.service}`,
           submissionDate: r.submissionDate || r.createdAt?.slice(0, 10),
-          dueDate: r.dueDate,
+          dueDate: r.dueDate || new Date().toISOString().slice(0, 10),
           feeAmount: r.feeAmount || 0,
+          createdAt: r.createdAt || new Date().toISOString(),
+          timeline: [
+            { status: 'SUBMITTED', label: 'Lead Assigned to Partner by Admin', timestamp: r.createdAt || new Date().toISOString() }
+          ]
         }));
+        // Sync backend data into localStorage so partner portal stays consistent
+        try { localStorage.setItem('bls_partner_mock_requests', JSON.stringify(mapped)); } catch (_) {}
         return { data: { success: true, serviceRequests: mapped, data: mapped } };
       }
     } catch (err) {
@@ -292,13 +309,64 @@ export const requestService = {
       });
       const data = await res.json();
       if (res.ok && data.success && data.data) {
+        const rawReq = data.data;
+        const mappedReq: any = {
+          _id: rawReq._id,
+          id: rawReq._id,
+          requestId: rawReq.requestId,
+          serviceRequestId: rawReq.requestId,
+          clientName: rawReq.clientName || rawReq.clientId?.clientName || 'Client',
+          clientId: rawReq.clientId?._id || rawReq.clientId || rawReq._id,
+          serviceName: rawReq.service || rawReq.serviceName,
+          serviceCategory: rawReq.category || 'Registration Services',
+          category: rawReq.category || 'Registration Services',
+          status: rawReq.status || 'Submitted',
+          priority: rawReq.priority || 'Medium',
+          financialYear: rawReq.financialYear || '2026-27',
+          description: (rawReq.notes && rawReq.notes[0]) || rawReq.description || `Consultation request for ${rawReq.service}`,
+          remarks: rawReq.remarks || '',
+          assignedTeam: rawReq.assignedStaff || 'CA Direct Tax Cell',
+          submissionDate: rawReq.submissionDate || rawReq.createdAt?.slice(0, 10),
+          createdAt: rawReq.createdAt || new Date().toISOString(),
+          updatedAt: rawReq.updatedAt || new Date().toISOString(),
+        };
+
+        const backendDocs = Array.isArray(rawReq.documents) ? rawReq.documents.map((d: any) => ({
+          _id: d._id,
+          id: d._id,
+          documentId: d.documentId,
+          originalName: d.documentName,
+          documentName: d.documentName,
+          documentType: d.documentType,
+          fileSize: typeof d.fileSize === 'number' ? d.fileSize : 1024 * 1024,
+          status: d.reviewStatus || 'Approved',
+          serviceRequestId: d.serviceRequestId || rawReq.requestId,
+          clientId: d.clientId,
+          createdAt: d.createdAt || d.uploadDate || new Date().toISOString(),
+          downloadUrl: d.filePath ? `http://localhost:5000${d.filePath}` : undefined
+        })) : [];
+
+        // Also merge local documents if any
+        const localDocs = mockStore.getDocuments().filter((d: any) => 
+          d.serviceRequestId === mappedReq.requestId || 
+          d.serviceRequestId === id ||
+          d.clientId === mappedReq.clientId
+        );
+
+        const allDocs = [...backendDocs];
+        for (const ld of localDocs) {
+          if (!allDocs.some((ad: any) => ad.originalName === ld.originalName)) {
+            allDocs.push(ld);
+          }
+        }
+
         return {
           data: {
             success: true,
-            request: data.data,
-            serviceRequest: data.data,
-            documents: [],
-            data: { request: data.data, documents: [] },
+            request: mappedReq,
+            serviceRequest: mappedReq,
+            documents: allDocs,
+            data: { request: mappedReq, documents: allDocs },
           },
         };
       }
@@ -309,6 +377,33 @@ export const requestService = {
     const request = requests.find((r) => r._id === id || r.id === id || r.requestId === id) || null;
     const documents = mockStore.getDocuments().filter((d) => d.serviceRequestId === request?.requestId || d.serviceRequestId === id);
     return { data: { success: true, request, serviceRequest: request, documents, data: { request, documents } } };
+  },
+
+  updateStatus: async (id: string, status: string, note?: string): Promise<any> => {
+    try {
+      const res = await fetch(`${BASE_URL}/requests/${id}/status`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status, note }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { data: { success: true, request: data.data, data: data.data } };
+      }
+    } catch (err) {
+      console.warn('Request status update failed, fallback to mockStore:', err);
+    }
+    const requests = mockStore.getRequests();
+    const req = requests.find(r => r._id === id || r.id === id || r.requestId === id);
+    if (req) {
+      req.status = status;
+      if (note && (!req.timeline || !req.timeline.some((t: any) => t.status === status))) {
+        req.timeline = req.timeline || [];
+        req.timeline.push({ status, label: note, timestamp: new Date().toISOString() });
+      }
+      try { localStorage.setItem('bls_partner_mock_requests', JSON.stringify(requests)); } catch (_) {}
+    }
+    return { data: { success: true, request: req, data: req } };
   },
 
   create: async (data: any): Promise<any> => {
@@ -358,7 +453,15 @@ export const documentService = {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        return { data: { success: true, document: data.data, data: data.data } };
+        const doc = data.data;
+        const newDoc = mockStore.addDocument({
+          documentType: doc.documentType || 'Uploaded Document',
+          clientId: doc.clientId || '',
+          serviceRequestId: doc.serviceRequestId || '',
+          originalName: doc.documentName || 'Uploaded_File.pdf',
+          fileSize: 1024 * 1024,
+        });
+        return { data: { success: true, document: doc || newDoc, data: doc || newDoc } };
       }
     } catch (err) {
       console.warn('Document upload API failed, saving to mockStore:', err);
@@ -473,21 +576,47 @@ export const dashboardService = {
       const data = await res.json();
       if (res.ok && data.success && data.data) {
         const pData = data.data;
+        const mappedRecentRequests = (pData.assignedRequests || []).map((r: any) => ({
+          _id: r._id,
+          id: r._id,
+          requestId: r.requestId,
+          serviceRequestId: r.requestId,
+          clientName: r.clientName,
+          serviceName: r.service,
+          serviceCategory: r.category || 'Registration Services',
+          category: r.category || 'Registration Services',
+          status: (r.status || 'SUBMITTED').toUpperCase(),
+          priority: (r.priority || 'MEDIUM').toUpperCase(),
+          financialYear: '2026-27',
+          submissionDate: r.submissionDate || r.createdAt?.slice(0, 10),
+          feeAmount: r.feeAmount || 0,
+        }));
+        const mappedRecentClients = (pData.assignedRequests || []).map((r: any) => ({
+          _id: r.clientId || r._id,
+          id: r.clientId || r._id,
+          fullName: r.clientName,
+          businessName: r.clientName + ' Enterprise',
+          clientType: 'Private Limited Company',
+          phone: '9829012345',
+          city: 'Jaipur',
+          createdAt: r.createdAt?.slice(0, 10),
+        }));
+
         return {
           data: {
             success: true,
             data: {
               stats: {
-                totalClients: pData.partner?.activeClientsCount || pData.stats?.totalRequests || 0,
-                totalRequests: pData.stats?.totalRequests || 0,
-                pendingRequests: pData.stats?.inProgressRequests || 0,
+                totalClients: pData.partner?.activeClientsCount || mappedRecentClients.length,
+                totalRequests: pData.stats?.totalRequests || mappedRecentRequests.length,
+                pendingRequests: pData.stats?.inProgressRequests || mappedRecentRequests.length,
                 completedRequests: pData.stats?.completedRequests || 0,
                 pendingDocuments: 0,
                 pendingPayouts: pData.stats?.pendingPayouts || 0,
                 totalEarnings: pData.stats?.totalEarnings || 0,
               },
-              recentRequests: pData.assignedRequests || [],
-              recentClients: [],
+              recentRequests: mappedRecentRequests,
+              recentClients: mappedRecentClients,
               pendingDocumentsList: [],
               notifications: [],
             },

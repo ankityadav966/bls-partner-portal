@@ -39,6 +39,7 @@ export const RequestDetailPage: React.FC = () => {
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isTicketOpen, setIsTicketOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchRequestDetails = async () => {
     if (!id) return;
@@ -85,27 +86,30 @@ export const RequestDetailPage: React.FC = () => {
     );
   }
 
-  // Calculate current timeline index
-  const getTimelineIndex = (status: string) => {
-    switch (status) {
-      case 'Submitted':
-        return 0;
-      case 'Under Review':
-        return 1;
-      case 'Documents Pending':
-        return 1;
-      case 'Processing':
-        return 2;
-      case 'In Review':
-        return 3;
-      case 'Completed':
-        return 4;
-      default:
-        return 0;
-    }
+  // Calculate current timeline index flexibly
+  const getTimelineIndex = (status: string, docsCount: number) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('complete')) return 4;
+    if (s.includes('in review') || s.includes('under review')) return 3;
+    if (s.includes('process')) return 2;
+    if (s.includes('document') || s.includes('received') || docsCount > 0) return 1;
+    return 0;
   };
 
-  const currentStepIdx = getTimelineIndex(request.status);
+  const currentStepIdx = getTimelineIndex(request.status, documents.length);
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!request) return;
+    try {
+      setUpdatingStatus(true);
+      await requestService.updateStatus(request._id || request.id || id!, newStatus, `Stage updated to ${newStatus} by Partner`);
+      await fetchRequestDetails();
+    } catch (err: any) {
+      console.error('Failed to update stage:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -156,9 +160,14 @@ export const RequestDetailPage: React.FC = () => {
 
       {/* Visual Workflow Progress Timeline */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs">
-        <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-6">
-          Official Case Processing Pipeline
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+            Official Case Processing Pipeline
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">
+            Stage {currentStepIdx + 1} of {TIMELINE_STEPS.length}
+          </span>
+        </div>
 
         <div className="relative">
           {/* Progress bar background line */}
@@ -202,6 +211,49 @@ export const RequestDetailPage: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Workflow Stage Progression Bar */}
+        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-amber-50/40 p-3.5 rounded-xl border border-amber-200/50">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-xs font-semibold text-slate-800">
+              Active Stage: <span className="font-bold text-amber-950">{TIMELINE_STEPS[currentStepIdx]}</span>
+            </span>
+            {documents.length > 0 && (
+              <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">
+                {documents.length} File{documents.length > 1 ? 's' : ''} Uploaded
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {currentStepIdx < 4 ? (
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={updatingStatus}
+                onClick={() => {
+                  const nextStatuses = [
+                    'Documents Received',
+                    'Processing',
+                    'Under Review',
+                    'Completed'
+                  ];
+                  handleUpdateStatus(nextStatuses[currentStepIdx]);
+                }}
+              >
+                {currentStepIdx === 0 && (documents.length > 0 ? 'Confirm & Move to Documents Received →' : 'Move to Documents Received →')}
+                {currentStepIdx === 1 && 'Advance to Under Processing →'}
+                {currentStepIdx === 2 && 'Submit for Under Review →'}
+                {currentStepIdx === 3 && 'Mark Case Completed ✓'}
+              </Button>
+            ) : (
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+                ✓ Case Successfully Completed
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -257,9 +309,9 @@ export const RequestDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {documents.map(doc => (
+                  {documents.map((doc, dIdx) => (
                     <div
-                      key={doc._id}
+                      key={doc._id || doc.id || `doc-${dIdx}`}
                       className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs"
                     >
                       <div className="flex items-center gap-3">
@@ -271,7 +323,19 @@ export const RequestDetailPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <StatusBadge status={doc.status} />
+                      <div className="flex items-center gap-2">
+                        {doc.downloadUrl && (
+                          <a
+                            href={doc.downloadUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-amber-800 hover:text-amber-950 font-semibold px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200"
+                          >
+                            Download
+                          </a>
+                        )}
+                        <StatusBadge status={doc.status} />
+                      </div>
                     </div>
                   ))}
                 </div>

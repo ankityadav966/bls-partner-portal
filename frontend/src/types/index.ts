@@ -88,6 +88,7 @@ export interface DocumentItem {
   originalName: string;
   fileName?: string;
   filePath?: string;
+  downloadUrl?: string;
   fileSize: number;
   mimetype?: string;
   mimeType?: string;

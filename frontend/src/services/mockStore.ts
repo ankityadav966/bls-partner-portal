@@ -39,6 +39,38 @@ const DEFAULT_PARTNER: Partner = {
 
 const DEFAULT_CLIENTS: Client[] = [
   {
+    _id: 'client_ankit_yadav',
+    id: 'client_ankit_yadav',
+    partnerId: 'partner_001',
+    fullName: 'Ankit Yadav',
+    businessName: 'Ankit Yadav Enterprise',
+    clientType: 'Sole Proprietorship',
+    phone: '9829012345',
+    mobile: '9829012345',
+    email: 'cijit92315@adsprite.com',
+    city: 'Jaipur (Vaishali Nagar)',
+    pan: 'AABCA1234F',
+    gstin: '08AABCA1234F1Z0',
+    notes: 'Inbound GST Registration enquiry assigned by BLS Admin.',
+    createdAt: '2026-09-22T06:24:00Z'
+  },
+  {
+    _id: 'client_ankit_101',
+    id: 'client_ankit_101',
+    partnerId: 'partner_001',
+    fullName: 'Ankit Kumar Test',
+    businessName: 'Ankit Kumar Enterprises',
+    clientType: 'Private Limited Company',
+    phone: '9888877777',
+    mobile: '9888877777',
+    email: 'ankit.test@example.com',
+    city: 'Jaipur',
+    pan: 'AABCA1234F',
+    gstin: '08AABCA1234F1Z0',
+    notes: 'Inbound enquiry assigned by BLS Admin from Public Website.',
+    createdAt: '2026-09-22T11:45:00Z'
+  },
+  {
     _id: 'client_101',
     id: 'client_101',
     partnerId: 'partner_001',
@@ -105,6 +137,48 @@ const DEFAULT_CLIENTS: Client[] = [
 ];
 
 const DEFAULT_REQUESTS: ServiceRequest[] = [
+  {
+    _id: 'req_ankit_yadav',
+    id: 'req_ankit_yadav',
+    requestId: 'SR-2026-0010',
+    serviceRequestId: 'SR-2026-0010',
+    partnerId: 'partner_001',
+    clientId: 'client_ankit_yadav',
+    clientName: 'Ankit Yadav',
+    serviceCategory: 'Registration Services',
+    category: 'Registration Services',
+    serviceName: 'GST Registration',
+    financialYear: '2026-27',
+    priority: 'HIGH',
+    status: 'SUBMITTED',
+    description: 'Inbound enquiry from BLS Public Website assigned to CA Rajesh Sharma (Sharma & Associates). Notes: tempppppppppppppppppppppppppppppp pppphone',
+    requirementDesc: 'Inbound enquiry from BLS Public Website assigned to CA Rajesh Sharma (Sharma & Associates). Notes: tempppppppppppppppppppppppppppppp pppphone',
+    timeline: [
+      { status: 'SUBMITTED', label: 'Lead Assigned to Partner by Admin', timestamp: '2026-09-22T06:26:16Z' }
+    ],
+    createdAt: '2026-09-22T06:24:00Z'
+  },
+  {
+    _id: 'req_ankit_101',
+    id: 'req_ankit_101',
+    requestId: 'SRN-2026-0010',
+    serviceRequestId: 'SRN-2026-0010',
+    partnerId: 'partner_001',
+    clientId: 'client_ankit_101',
+    clientName: 'Ankit Kumar Test',
+    serviceCategory: 'Registration Services',
+    category: 'Registration Services',
+    serviceName: 'GST Registration',
+    financialYear: '2026-27',
+    priority: 'HIGH',
+    status: 'SUBMITTED',
+    description: 'Inbound enquiry from BLS Public Website assigned to Sharma & Associates by Admin.',
+    requirementDesc: 'Inbound enquiry from BLS Public Website assigned to Sharma & Associates by Admin.',
+    timeline: [
+      { status: 'SUBMITTED', label: 'Lead Assigned to Partner by Admin', timestamp: '2026-09-22T11:45:00Z' }
+    ],
+    createdAt: '2026-09-22T11:45:00Z'
+  },
   {
     _id: 'req_201',
     id: 'req_201',
@@ -378,7 +452,16 @@ function getStored<T>(key: string, fallback: T): T {
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && Array.isArray(fallback)) {
+      const missing = (fallback as any[]).filter(fb => !parsed.some((p: any) => (p.id && p.id === fb.id) || (p._id && p._id === fb._id) || (p.requestId && p.requestId === fb.requestId)));
+      if (missing.length > 0) {
+        const merged = [...missing, ...parsed];
+        localStorage.setItem(key, JSON.stringify(merged));
+        return merged as unknown as T;
+      }
+    }
+    return parsed;
   } catch (e) {
     return fallback;
   }

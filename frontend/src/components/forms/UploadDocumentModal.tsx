@@ -66,8 +66,8 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       ]);
       if (resC.data.success) {
         setClients(resC.data.clients || []);
-        if (!preselectedClientId && resC.data.clients.length > 0) {
-          setClientId(resC.data.clients[0].id);
+        if (!preselectedClientId && !defaultClientId && resC.data.clients.length > 0) {
+          setClientId(resC.data.clients[0].id || resC.data.clients[0]._id);
         }
       }
       if (resR.data.success) {
@@ -108,7 +108,9 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     setIsLoading(true);
     try {
       const formData = new FormData();
+      formData.append('file', selectedFile);
       formData.append('document', selectedFile);
+      formData.append('title', selectedFile.name);
       formData.append('clientId', clientId);
       formData.append('serviceRequestId', serviceRequestId);
       formData.append('documentType', documentType);
@@ -117,9 +119,11 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (res.data.success) {
+      if (res.data?.success) {
         onClose();
         if (onSuccess) onSuccess();
+      } else {
+        setError(res.data?.message || 'Upload failed.');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Upload failed. Please check file format.');
