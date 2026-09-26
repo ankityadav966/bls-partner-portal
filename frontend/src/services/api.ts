@@ -1,6 +1,11 @@
 import { mockStore } from './mockStore';
 
-const BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+export const PRODUCTION_API_URL = 'https://pls.durgaselector.com/api/v1';
+export const LIVE_EC2_FALLBACK_URL = 'http://bls.durgagenerator.com/api/v1';
+
+export const BASE_URL = (import.meta as any).env?.VITE_API_URL 
+  || (import.meta as any).env?.VITE_API_BASE_URL 
+  || PRODUCTION_API_URL;
 
 const getAuthHeaders = (isJson = true): HeadersInit => {
   const token = localStorage.getItem('bls_partner_token') || '';
@@ -15,29 +20,45 @@ const getAuthHeaders = (isJson = true): HeadersInit => {
 };
 
 export const partnerFetch = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
-  const url = `${BASE_URL}${endpoint}`;
   const isJson = !(options.body instanceof FormData);
   const headers = {
     ...getAuthHeaders(isJson),
     ...(options.headers || {})
   };
 
-  const res = await fetch(url, { ...options, headers });
+  const execute = async (baseUrl: string) => {
+    const url = `${baseUrl}${endpoint}`;
+    const res = await fetch(url, { ...options, headers });
 
-  if (res.status === 401) {
-    console.warn('[Partner API] 401 Unauthorized detected. Clearing partner session.');
-    localStorage.removeItem('bls_partner_token');
-    localStorage.removeItem('bls_partner_user');
+    if (res.status === 401) {
+      console.warn('[Partner API] 401 Unauthorized detected. Clearing partner session.');
+      localStorage.removeItem('bls_partner_token');
+      localStorage.removeItem('bls_partner_user');
 
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      window.location.href = '/login?expired=1';
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login?expired=1';
+      }
+
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Session expired. Please log in again.');
     }
 
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || 'Session expired. Please log in again.');
-  }
+    return res;
+  };
 
-  return res;
+  try {
+    return await execute(BASE_URL);
+  } catch (err: any) {
+    if (BASE_URL !== LIVE_EC2_FALLBACK_URL) {
+      try {
+        console.info(`[Partner API] Retrying ${endpoint} on live host...`);
+        return await execute(LIVE_EC2_FALLBACK_URL);
+      } catch (fallbackErr: any) {
+        throw fallbackErr;
+      }
+    }
+    throw err;
+  }
 };
 
 export const authService = {
@@ -354,7 +375,7 @@ export const requestService = {
           serviceRequestId: d.serviceRequestId || rawReq.requestId,
           clientId: d.clientId,
           createdAt: d.createdAt || d.uploadDate || new Date().toISOString(),
-          downloadUrl: d.filePath ? `http://localhost:5000${d.filePath}` : undefined
+          downloadUrl: d.fileUrl || (d.filePath ? `${BASE_URL.replace('/api/v1', '')}${d.filePath}` : undefined)
         })) : [];
 
         // Also merge local documents if any

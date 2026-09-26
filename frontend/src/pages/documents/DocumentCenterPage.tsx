@@ -12,7 +12,7 @@ import {
   FileCheck,
   Shield
 } from 'lucide-react';
-import { documentService } from '../../services/api';
+import { documentService, BASE_URL } from '../../services/api';
 import { DocumentItem } from '../../types';
 import StatusBadge from '../../components/common/StatusBadge';
 import Button from '../../components/common/Button';
@@ -57,9 +57,13 @@ export const DocumentCenterPage: React.FC = () => {
   });
 
   const handleDownload = (doc: DocumentItem) => {
-    // Downloads securely via authorized backend token
-    const token = localStorage.getItem('bls_partner_token');
-    const downloadUrl = `http://localhost:5001/api/partner/documents/${doc._id}/download?token=${token}`;
+    // Downloads securely via direct secure cloud URL or authorized backend token
+    if ((doc as any).fileUrl) {
+      window.open((doc as any).fileUrl, '_blank');
+      return;
+    }
+    const token = localStorage.getItem('bls_partner_token') || '';
+    const downloadUrl = `${BASE_URL}/documents/${doc._id || doc.id}/download?token=${token}`;
     window.open(downloadUrl, '_blank');
   };
 
