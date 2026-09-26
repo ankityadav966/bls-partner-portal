@@ -14,49 +14,60 @@ const getAuthHeaders = (isJson = true): HeadersInit => {
   return headers;
 };
 
+export const partnerFetch = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
+  const url = `${BASE_URL}${endpoint}`;
+  const isJson = !(options.body instanceof FormData);
+  const headers = {
+    ...getAuthHeaders(isJson),
+    ...(options.headers || {})
+  };
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401) {
+    console.warn('[Partner API] 401 Unauthorized detected. Clearing partner session.');
+    localStorage.removeItem('bls_partner_token');
+    localStorage.removeItem('bls_partner_user');
+
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login?expired=1';
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Session expired. Please log in again.');
+  }
+
+  return res;
+};
+
 export const authService = {
   login: async (email: string, password: string): Promise<any> => {
-    try {
-      const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, portal: 'partner' }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success && data.data?.accessToken) {
-        const token = data.data.accessToken;
-        const partnerProfile = data.data.user?.profile || {
-          fullName: data.data.user?.name,
-          email: data.data.user?.email,
-          mobile: data.data.user?.phone,
-          partnerId: data.data.user?.profile?.partnerId || 'PTR-2026-0001',
-          status: 'APPROVED',
-        };
-        localStorage.setItem('bls_partner_token', token);
-        localStorage.setItem('bls_partner_user', JSON.stringify(partnerProfile));
-        return {
-          data: {
-            success: true,
-            token,
-            partner: partnerProfile,
-          },
-        };
-      }
-      throw new Error(data.message || 'Login failed');
-    } catch (err: any) {
-      console.warn('Backend login unavailable or failed, utilizing local fallback:', err.message);
-      const partner = mockStore.getPartner();
-      const token = 'partner_token_' + Date.now();
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, portal: 'partner' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success && data.data?.accessToken) {
+      const token = data.data.accessToken;
+      const partnerProfile = data.data.user?.profile || {
+        fullName: data.data.user?.name,
+        email: data.data.user?.email,
+        mobile: data.data.user?.phone,
+        partnerId: data.data.user?.profile?.partnerId || 'PTR-2026-0001',
+        status: data.data.user?.profile?.status || 'APPROVED',
+      };
       localStorage.setItem('bls_partner_token', token);
-      localStorage.setItem('bls_partner_user', JSON.stringify({ ...partner, email }));
+      localStorage.setItem('bls_partner_user', JSON.stringify(partnerProfile));
       return {
         data: {
           success: true,
           token,
-          partner: { ...partner, email },
+          partner: partnerProfile,
         },
       };
     }
+    throw new Error(data.message || 'Invalid email or password');
   },
 
   register: async (data: any): Promise<any> => {

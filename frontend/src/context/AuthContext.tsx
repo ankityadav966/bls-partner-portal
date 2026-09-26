@@ -22,44 +22,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    const defaultPartner: Partner = {
-      id: 'partner_001',
-      partnerId: 'BLS-P-10024',
-      fullName: 'CA Rajesh Sharma',
-      email: 'partner@blscompany.com',
-      mobile: '9829012345',
-      city: 'Jaipur',
-      district: 'Jaipur',
-      qualification: 'Chartered Accountant (FCA)',
-      profession: 'Practicing Chartered Accountant',
-      firmName: 'Sharma & Associates',
-      businessExperience: '8+ Years',
-      interestedServices: [
-        'Taxation & Return Filing',
-        'Notice & Representation',
-        'Compliance Services',
-        'Registration Services'
-      ],
-      status: 'APPROVED',
-      createdAt: '2026-01-10T10:00:00Z',
-      approvedAt: '2026-01-11T12:00:00Z'
-    };
-    localStorage.setItem('bls_partner_user', JSON.stringify(defaultPartner));
-    return defaultPartner;
+    return null;
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    const saved = localStorage.getItem('bls_partner_token');
-    if (saved) return saved;
-    const defaultToken = 'mock_jwt_token_bls_partner_active';
-    localStorage.setItem('bls_partner_token', defaultToken);
-    return defaultToken;
+    return localStorage.getItem('bls_partner_token');
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    refreshProfile();
-  }, []);
+    if (token) {
+      refreshProfile();
+    }
+  }, [token]);
 
   const refreshProfile = async () => {
     try {

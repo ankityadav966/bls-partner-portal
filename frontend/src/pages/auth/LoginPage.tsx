@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 
@@ -38,11 +38,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickDemo = () => {
-    setEmail('partner@blscompany.com');
-    setPassword('Partner@123');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
@@ -67,25 +62,6 @@ export const LoginPage: React.FC = () => {
               <span>{error}</span>
             </div>
           )}
-
-          {/* Demo Credentials Pill */}
-          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-amber-800 block tracking-wider">
-                Demo Approved Partner
-              </span>
-              <span className="text-xs text-slate-700 font-mono">
-                partner@blscompany.com • Partner@123
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickDemo}
-              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shrink-0 cursor-pointer shadow-xs"
-            >
-              Fill Demo
-            </button>
-          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
