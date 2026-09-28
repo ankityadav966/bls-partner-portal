@@ -1,11 +1,17 @@
 import { mockStore } from './mockStore';
 
-export const PRODUCTION_API_URL = 'https://pls.durgaselector.com/api/v1';
+export const PRODUCTION_API_URL = '/api/v1';
 export const LIVE_EC2_FALLBACK_URL = 'http://bls.durgagenerator.com/api/v1';
 
-export const BASE_URL = (import.meta as any).env?.VITE_API_URL 
-  || (import.meta as any).env?.VITE_API_BASE_URL 
-  || PRODUCTION_API_URL;
+export const getBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE_URL;
+  if (envUrl && !envUrl.includes('pls.durgaselector.com')) {
+    return envUrl;
+  }
+  return '/api/v1';
+};
+
+export const BASE_URL = getBaseUrl();
 
 const getAuthHeaders = (isJson = true): HeadersInit => {
   const token = localStorage.getItem('bls_partner_token') || '';
@@ -27,7 +33,8 @@ export const partnerFetch = async (endpoint: string, options: RequestInit = {}):
   };
 
   const execute = async (baseUrl: string) => {
-    const url = `${baseUrl}${endpoint}`;
+    const formattedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${baseUrl}${formattedEndpoint}`;
     const res = await fetch(url, { ...options, headers });
 
     if (res.status === 401) {
@@ -49,7 +56,8 @@ export const partnerFetch = async (endpoint: string, options: RequestInit = {}):
   try {
     return await execute(BASE_URL);
   } catch (err: any) {
-    if (BASE_URL !== LIVE_EC2_FALLBACK_URL) {
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (!isHttps && BASE_URL !== LIVE_EC2_FALLBACK_URL) {
       try {
         console.info(`[Partner API] Retrying ${endpoint} on live host...`);
         return await execute(LIVE_EC2_FALLBACK_URL);

@@ -7,5 +7,11 @@ export default defineConfig({
   server: {
     port: 5175,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://bls.durgagenerator.com',
+        changeOrigin: true,
+      },
+    },
   },
 });

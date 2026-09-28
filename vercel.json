@@ -6,6 +6,26 @@
   "installCommand": "cd frontend && npm install",
   "rewrites": [
     {
+      "source": "/api/v1/:path*",
+      "destination": "http://bls.durgagenerator.com/api/v1/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "http://bls.durgagenerator.com/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "http://bls.durgagenerator.com/health"
+    },
+    {
+      "source": "/ready",
+      "destination": "http://bls.durgagenerator.com/ready"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "http://bls.durgagenerator.com/uploads/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
