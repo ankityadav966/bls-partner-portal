@@ -9,8 +9,9 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://bls.durgagenerator.com',
+        target: 'https://bls.durgagenerator.com',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

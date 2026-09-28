@@ -1,17 +1,32 @@
 import { mockStore } from './mockStore';
 
-export const PRODUCTION_API_URL = '/api/v1';
-export const LIVE_EC2_FALLBACK_URL = 'http://bls.durgagenerator.com/api/v1';
+export const PRODUCTION_API_URL = 'https://bls.durgagenerator.com/api/v1';
 
 export const getBaseUrl = (): string => {
   const envUrl = (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE_URL;
-  if (envUrl && !envUrl.includes('pls.durgaselector.com')) {
-    return envUrl;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '' && !envUrl.includes('pls.durgaselector.com')) {
+    return envUrl.trim().replace(/\/+$/, '');
   }
-  return '/api/v1';
+  return PRODUCTION_API_URL;
 };
 
 export const BASE_URL = getBaseUrl();
+
+/**
+ * Normalizes API endpoint URL so /api/v1 is never duplicated.
+ */
+export const buildApiUrl = (baseUrl: string, endpoint: string): string => {
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (cleanBase.endsWith('/api/v1') && cleanEndpoint.startsWith('/api/v1/')) {
+    cleanEndpoint = cleanEndpoint.substring('/api/v1'.length);
+  } else if (cleanBase.endsWith('/api/v1') && cleanEndpoint === '/api/v1') {
+    cleanEndpoint = '';
+  }
+
+  return `${cleanBase}${cleanEndpoint}`;
+};
 
 const getAuthHeaders = (isJson = true): HeadersInit => {
   const token = localStorage.getItem('bls_partner_token') || '';
@@ -33,13 +48,13 @@ export const partnerFetch = async (endpoint: string, options: RequestInit = {}):
   };
 
   const execute = async (baseUrl: string) => {
-    const formattedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${baseUrl}${formattedEndpoint}`;
+    const url = buildApiUrl(baseUrl, endpoint);
     const res = await fetch(url, { ...options, headers });
 
     if (res.status === 401) {
       console.warn('[Partner API] 401 Unauthorized detected. Clearing partner session.');
       localStorage.removeItem('bls_partner_token');
+      localStorage.removeItem('bls_partner_refresh_token');
       localStorage.removeItem('bls_partner_user');
 
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
@@ -56,11 +71,10 @@ export const partnerFetch = async (endpoint: string, options: RequestInit = {}):
   try {
     return await execute(BASE_URL);
   } catch (err: any) {
-    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    if (!isHttps && BASE_URL !== LIVE_EC2_FALLBACK_URL) {
+    if (BASE_URL !== PRODUCTION_API_URL) {
       try {
-        console.info(`[Partner API] Retrying ${endpoint} on live host...`);
-        return await execute(LIVE_EC2_FALLBACK_URL);
+        console.info(`[Partner API] Retrying ${endpoint} on production host...`);
+        return await execute(PRODUCTION_API_URL);
       } catch (fallbackErr: any) {
         throw fallbackErr;
       }
@@ -71,7 +85,8 @@ export const partnerFetch = async (endpoint: string, options: RequestInit = {}):
 
 export const authService = {
   login: async (email: string, password: string): Promise<any> => {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const url = buildApiUrl(BASE_URL, '/auth/login');
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, portal: 'partner' }),
@@ -87,6 +102,9 @@ export const authService = {
         status: data.data.user?.profile?.status || 'APPROVED',
       };
       localStorage.setItem('bls_partner_token', token);
+      if (data.data?.refreshToken) {
+        localStorage.setItem('bls_partner_refresh_token', data.data.refreshToken);
+      }
       localStorage.setItem('bls_partner_user', JSON.stringify(partnerProfile));
       return {
         data: {
