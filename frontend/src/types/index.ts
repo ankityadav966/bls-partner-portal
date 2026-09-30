@@ -30,6 +30,7 @@ export interface Partner {
 export interface Client {
   _id?: string;
   id?: string;
+  clientId?: string;
   partnerId?: string;
   fullName: string;
   businessName?: string;

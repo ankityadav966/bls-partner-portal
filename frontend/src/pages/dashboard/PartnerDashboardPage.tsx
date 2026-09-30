@@ -112,48 +112,34 @@ export const PartnerDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Statistics Cards - Responsive Grid with Zero Overflow */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4">
+      {/* 4 Focused Executive Indicators */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Clients"
+          title="Client Portfolio"
           value={stats?.totalClients ?? 0}
-          subtitle="Managed in portfolio"
-          icon={<Users className="w-4 h-4" />}
-          variant="gold"
-        />
-        <StatCard
-          title="Total Requests"
-          value={stats?.totalRequests ?? 0}
-          subtitle="Service cases created"
-          icon={<Briefcase className="w-4 h-4" />}
+          subtitle="Corporate accounts managed"
+          icon={<Users className="w-5 h-5 text-blue-600" />}
           variant="blue"
         />
         <StatCard
-          title="In Progress"
+          title="Active Engagements"
           value={stats?.pendingRequests ?? 0}
-          subtitle="Under processing/review"
-          icon={<Clock className="w-4 h-4" />}
-          variant="warning"
+          subtitle="Cases under live execution"
+          icon={<Briefcase className="w-5 h-5 text-blue-600" />}
+          variant="blue"
         />
         <StatCard
-          title="Completed"
+          title="Completed Filings"
           value={stats?.completedRequests ?? 0}
-          subtitle="Successfully filed/resolved"
-          icon={<CheckCircle2 className="w-4 h-4" />}
+          subtitle="Successfully filed with authorities"
+          icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
           variant="success"
         />
         <StatCard
-          title="Docs Pending"
-          value={stats?.documentsPending ?? 0}
-          subtitle="Client upload required"
-          icon={<FileWarning className="w-4 h-4" />}
-          variant="danger"
-        />
-        <StatCard
-          title="Settled Payout"
+          title="Partner Commercials"
           value={`₹${((stats?.settledPayout ?? 0) / 1000).toFixed(1)}k`}
-          subtitle={`₹${((stats?.pendingPayout ?? 0) / 1000).toFixed(1)}k Pending`}
-          icon={<Coins className="w-4 h-4" />}
+          subtitle={`₹${((stats?.pendingPayout ?? 0) / 1000).toFixed(1)}k Pending settlement`}
+          icon={<Coins className="w-5 h-5 text-blue-600" />}
           variant="gold"
         />
       </div>
@@ -299,58 +285,6 @@ export const PartnerDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Clients */}
-          <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Recent Clients
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Exclusive client records linked to your Partner ID
-                </p>
-              </div>
-              <Link
-                to="/clients"
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1 transition-colors"
-              >
-                Manage Clients <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {recentClients.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">
-                  No clients enrolled yet. Use "Add New Client" to start building your client base.
-                </div>
-              ) : (
-                recentClients.map(client => (
-                  <div key={client._id} className="p-4 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-800 font-bold text-xs">
-                        {client.fullName.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">{client.fullName}</div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                          {client.businessName && <span>{client.businessName} • </span>}
-                          <span>{client.city}</span>
-                          <span>•</span>
-                          <span className="text-amber-700 font-semibold">{client.clientType}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Link
-                      to={`/clients/${client._id}`}
-                      className="text-xs font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
-                    >
-                      View
-                    </Link>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Right Column (1 col): Notifications & Commercial Summary */}

@@ -251,9 +251,16 @@ export const clientService = {
       console.warn('Client overview fetch failed, fallback to mockStore:', err);
     }
     const clients = mockStore.getClients();
-    const client = clients.find((c) => c._id === id || c.id === id) || null;
-    const requests = mockStore.getRequests().filter((r) => r.clientId === id);
-    const documents = mockStore.getDocuments().filter((d) => d.clientId === id);
+    const cleanId = String(id).trim();
+    const client = clients.find((c) => 
+      c._id === cleanId || 
+      c.id === cleanId || 
+      c.clientId === cleanId ||
+      String(c.id).toLowerCase() === cleanId.toLowerCase() ||
+      (cleanId.length <= 5 && (c.id?.endsWith(`-${cleanId}`) || c.clientId?.endsWith(`-${cleanId}`) || c.clientId?.endsWith(cleanId.padStart(4, '0'))))
+    ) || null;
+    const requests = mockStore.getRequests().filter((r) => r.clientId === id || (client && (r.clientId === client._id || r.clientId === client.id)));
+    const documents = mockStore.getDocuments().filter((d) => d.clientId === id || (client && (d.clientId === client._id || d.clientId === client.id)));
     return { data: { success: true, client, requests, documents, data: { client, requests, documents } } };
   },
 
