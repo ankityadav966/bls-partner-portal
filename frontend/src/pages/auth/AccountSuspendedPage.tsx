@@ -44,7 +44,7 @@ export const AccountSuspendedPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <PhoneCall className="w-4 h-4 text-brand-gold" />
-              <span>Direct Hotline: +91 63506 50966</span>
+              <span>Direct Hotline: +91 97843 43068</span>
             </div>
           </div>
 

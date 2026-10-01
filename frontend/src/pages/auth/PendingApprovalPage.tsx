@@ -73,7 +73,7 @@ export const PendingApprovalPage: React.FC = () => {
           <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
             <div className="flex items-center gap-1.5">
               <PhoneCall className="w-3.5 h-3.5 text-brand-gold" />
-              <span>Partner Desk: +91 63506 50966</span>
+              <span>Partner Desk: +91 97843 43068</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-brand-gold" />
